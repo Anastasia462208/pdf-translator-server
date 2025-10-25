@@ -74,7 +74,7 @@ class PDFTranslator:
             return text
     
     def extract_images(self, pdf_document, output_folder):
-        Path(output_folder).mkdir(exist_ok=True)
+        Path(output_folder).mkdir(parents=True, exist_ok=True)
         image_counter = 0
         
         for page_num in range(len(pdf_document)):
@@ -349,6 +349,7 @@ def process_pdf_task(task_id, pdf_path, terminology, source_lang, target_lang):
         # Извлечение изображений
         tasks[task_id]['stage'] = 'Извлечение изображений'
         output_folder = os.path.join(app.config['OUTPUT_FOLDER'], task_id)
+        Path(output_folder).mkdir(parents=True, exist_ok=True)
         images_folder = os.path.join(output_folder, "images")
         translator.extract_images(pdf_document, images_folder)
         
