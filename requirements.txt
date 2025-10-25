@@ -1,0 +1,5 @@
+Flask==3.0.0
+PyMuPDF==1.23.8
+deep-translator==1.11.4
+Werkzeug==3.0.1
+
