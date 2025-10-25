@@ -5,7 +5,7 @@ import fitz  # PyMuPDF
 import json
 import base64
 from pathlib import Path
-from deep_translator import GoogleTranslator
+from deep_translator import GoogleTranslator, MyMemoryTranslator
 import re
 import zipfile
 from io import BytesIO
@@ -32,7 +32,16 @@ class PDFTranslator:
         self.terminology = terminology_dict or {}
         self.source_lang = source_lang
         self.target_lang = target_lang
-        self.translator = GoogleTranslator(source=source_lang, target=target_lang)
+        
+        # Используем MyMemoryTranslator как основной, с fallback на Google
+        try:
+            self.translator = MyMemoryTranslator(source=source_lang, target=target_lang)
+            self.translator_type = 'MyMemory'
+        except:
+            self.translator = GoogleTranslator(source=source_lang, target=target_lang)
+            self.translator_type = 'Google'
+        
+        print(f"Используется переводчик: {self.translator_type}")
         self.images_data = []
         self.content_blocks = []
         
@@ -66,9 +75,24 @@ class PDFTranslator:
         
         try:
             protected_text, term_map = self.protect_terminology(text)
-            translated = self.translator.translate(protected_text)
-            final_text = self.restore_terminology(translated, term_map)
-            return final_text
+            
+            # Пытаемся перевести с повторными попытками
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    translated = self.translator.translate(protected_text)
+                    if translated:
+                        final_text = self.restore_terminology(translated, term_map)
+                        return final_text
+                except Exception as retry_error:
+                    print(f"Попытка {attempt + 1}/{max_retries} перевода не удалась: {retry_error}")
+                    if attempt < max_retries - 1:
+                        import time
+                        time.sleep(1)  # Пауза перед повторной попыткой
+                    else:
+                        raise
+            
+            return text
         except Exception as e:
             print(f"Ошибка перевода: {e}")
             return text
@@ -347,6 +371,8 @@ def process_pdf_task(task_id, pdf_path, terminology, source_lang, target_lang):
         tasks[task_id]['status'] = 'processing'
         tasks[task_id]['progress'] = 0
         
+        print(f"Создание переводчика: {source_lang} -> {target_lang}")
+        print(f"Терминология: {terminology}")
         translator = PDFTranslator(terminology, source_lang, target_lang)
         pdf_document = fitz.open(pdf_path)
         
