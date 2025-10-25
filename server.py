@@ -87,7 +87,13 @@ class PDFTranslator:
                     base_image = pdf_document.extract_image(xref)
                     image_bytes = base_image["image"]
                     image_ext = base_image["ext"]
-                    img_rect = page.get_image_bbox(img)
+                    
+                    # Получаем позицию изображения на странице
+                    try:
+                        img_rect = page.get_image_bbox(img)
+                    except:
+                        # Если не удалось получить bbox, используем дефолтные значения
+                        img_rect = fitz.Rect(0, 0, 100, 100)
                     
                     image_filename = f"image_{image_counter:04d}.{image_ext}"
                     image_path = os.path.join(output_folder, image_filename)
